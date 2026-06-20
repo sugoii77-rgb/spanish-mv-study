@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎵 스페인어 뮤직비디오 학습</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0d0d1a;
+    color: #fff;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    text-align: center;
+    padding: 18px;
+    background: linear-gradient(135deg, #1a0533, #0d1a33);
+    border-bottom: 1px solid #333;
+  }
+  header h1 { font-size: 1.4rem; color: #f0a; letter-spacing: 2px; }
+  header p { font-size: 0.8rem; color: #aaa; margin-top: 4px; }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .video-wrap {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 40px #f0a4;
+    background: #000;
+  }
+
+  .yt-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%;
+    background: #000;
+  }
+  .yt-container iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 16px;
+    background: #111;
+    flex-wrap: wrap;
+  }
+  .controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #ccc;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-switch { position: relative; width: 40px; height: 22px; }
+  .toggle-switch input { display: none; }
+  .slider {
+    position: absolute; inset: 0;
+    background: #444; border-radius: 22px; transition: 0.3s; cursor: pointer;
+  }
+  .slider::before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; left: 3px; top: 3px;
+    background: #fff; border-radius: 50%; transition: 0.3s;
+  }
+  input:checked + .slider { background: #f0a; }
+  input:checked + .slider::before { transform: translateX(18px); }
+
+  .sync-info { margin-left: auto; font-size: 0.75rem; color: #666; }
+
+  /* Lyrics */
+  .lyrics-panel {
+    width: 100%;
+    background: #111;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #222;
+    max-height: 420px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .section-label {
+    font-size: 0.7rem; color: #f0a; letter-spacing: 3px;
+    text-transform: uppercase; margin: 16px 0 8px;
+    padding: 4px 10px; background: #1a0526;
+    border-radius: 4px; display: inline-block;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  .lyric-line { margin: 6px 0; line-height: 1.7; padding: 3px 4px; border-radius: 4px; border-left: 3px solid transparent; }
+  .lyric-line.active {
+    border-left-color: #f0a;
+    padding-left: 10px;
+    background: #1a0d2a;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .es-text { font-size: 1.05rem; color: #eee; }
+  .lyric-line.active .es-text .word { color: #ffe066; }
+
+  .word {
+    display: inline; cursor: pointer;
+    border-radius: 3px; padding: 1px 2px;
+    transition: background 0.15s, color 0.15s;
+    white-space: pre-wrap;
+  }
+  .word:hover { background: #f0a3; color: #ffe066; }
+
+  .ko-text {
+    font-size: 0.88rem; color: #aaa;
+    margin-top: 2px; display: none;
+  }
+  .ko-text.visible { display: block; }
+
+  .stage-note { font-size: 0.8rem; color: #7080a0; font-style: italic; margin: 4px 0 8px; }
+
+  /* Popup */
+  #popup { position: fixed; display: none; z-index: 999; pointer-events: none; }
+  #popup.show { display: block; }
+  .popup-box {
+    background: #1a0d2e; border: 1px solid #f0a;
+    border-radius: 10px; padding: 14px 18px;
+    min-width: 220px; max-width: 300px;
+    box-shadow: 0 8px 30px #0009; pointer-events: all;
+    position: relative;
+  }
+  .popup-word { font-size: 1.3rem; font-weight: bold; color: #f0a; margin-bottom: 4px; }
+  .popup-pron { font-size: 0.85rem; color: #9ad; margin-bottom: 8px; }
+  .popup-pron span { color: #7bf; font-style: italic; }
+  .popup-meaning { font-size: 0.95rem; color: #eee; border-top: 1px solid #333; padding-top: 8px; }
+  .popup-ko { font-size: 0.85rem; color: #bbb; margin-top: 6px; }
+  .popup-close {
+    position: absolute; top: 8px; right: 10px;
+    cursor: pointer; color: #888; font-size: 1rem;
+  }
+  .popup-close:hover { color: #fff; }
+
+  /* Vocab */
+  .vocab-section { width: 100%; }
+  .vocab-toggle-btn {
+    width: 100%; background: #1a0d2e; border: 1px solid #333;
+    color: #ccc; padding: 10px 16px; border-radius: 8px;
+    cursor: pointer; font-size: 0.9rem; text-align: left; transition: background 0.2s;
+  }
+  .vocab-toggle-btn:hover { background: #270a44; }
+  .vocab-grid {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px; margin-top: 10px;
+  }
+  .vocab-grid.open { display: grid; }
+  .vocab-card {
+    background: #111; border: 1px solid #2a1a3e;
+    border-radius: 8px; padding: 10px 12px;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .vocab-card:hover { border-color: #f0a; }
+  .vocab-card .vc-es { font-weight: bold; color: #f0a; }
+  .vocab-card .vc-pron { font-size: 0.75rem; color: #7bf; }
+  .vocab-card .vc-ko { font-size: 0.85rem; color: #ccc; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎵 스페인어 뮤직비디오 학습</h1>
+  <p>자막 단어를 클릭하면 뜻과 발음을 확인할 수 있어요</p>
+</header>
+
+<div class="main">
+
+  <div class="video-wrap">
+    <div class="yt-container">
+      <div id="ytPlayer"></div>
+    </div>
+    <div class="controls">
+      <label>
+        <span class="toggle-switch">
+          <input type="checkbox" id="koToggle" checked>
+          <span class="slider"></span>
+        </span>
+        한국어 자막
+      </label>
+      <label>
+        <span class="toggle-switch">
+          <input type="checkbox" id="autoScrollToggle" checked>
+          <span class="slider"></span>
+        </span>
+        자동 스크롤
+      </label>
+      <span class="sync-info" id="syncInfo">⏱ 00:00</span>
+    </div>
+  </div>
+
+  <div class="lyrics-panel" id="lyricsPanel"></div>
+
+  <div class="vocab-section">
+    <button class="vocab-toggle-btn" onclick="toggleVocab()">📚 단어장 펼치기 / 접기</button>
+    <div class="vocab-grid" id="vocabGrid"></div>
+  </div>
+
+</div>
+
+<div id="popup">
+  <div class="popup-box" id="popupBox">
+    <span class="popup-close" onclick="closePopup()">✕</span>
+    <div class="popup-word" id="pWord"></div>
+    <div class="popup-pron" id="pPron"></div>
+    <div class="popup-meaning" id="pMeaning"></div>
+    <div class="popup-ko" id="pKo"></div>
+  </div>
+</div>
+
+<!-- YouTube IFrame API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+// ─── Dictionary ───────────────────────────────────────────────────────
+const DICT = {
+  "escucha":      { pron:"에스-꾸-차", ipa:"es.ˈku.tʃa", meaning:"들어봐, 들어라", ko:"동사 'escuchar(듣다)'의 명령형" },
+  "esta":         { pron:"에스-따", ipa:"ˈes.ta", meaning:"이, 이것", ko:"여성 지시형용사" },
+  "noche":        { pron:"노-체", ipa:"ˈno.tʃe", meaning:"밤", ko:"명사 (여성)" },
+  "esta noche":   { pron:"에스따 노-체", ipa:"ˈes.ta ˈno.tʃe", meaning:"오늘 밤", ko:"관용 표현" },
+  "los":          { pron:"로스", ipa:"los", meaning:"(복수) 정관사 '그'", ko:"남성 복수 정관사" },
+  "dos":          { pron:"도스", ipa:"dos", meaning:"둘, 우리 둘", ko:"숫자 2" },
+  "viento":       { pron:"비엔-또", ipa:"ˈbjen.to", meaning:"바람", ko:"명사 (남성)" },
+  "sopla":        { pron:"소-쁠라", ipa:"ˈso.pla", meaning:"불다 (바람이)", ko:"동사 soplar의 3인칭 단수" },
+  "suave":        { pron:"수-아-베", ipa:"ˈswa.βe", meaning:"부드럽게, 달콤하게", ko:"형용사/부사" },
+  "quemar":       { pron:"께-마르", ipa:"ke.ˈmar", meaning:"불태우다, 타오르다", ko:"동사 원형" },
+  "mano":         { pron:"마-노", ipa:"ˈma.no", meaning:"손", ko:"명사 (여성, 예외)" },
+  "jugar":        { pron:"후-가르", ipa:"xu.ˈɣar", meaning:"놀다, 장난치다", ko:"동사 원형" },
+  "paso":         { pron:"빠-소", ipa:"ˈpa.so", meaning:"걸음, 발걸음", ko:"명사" },
+  "paso a paso":  { pron:"빠소 아 빠소", ipa:"ˈpa.so a ˈpa.so", meaning:"한 걸음씩", ko:"관용구" },
+  "ritmo":        { pron:"릿-모", ipa:"ˈrit.mo", meaning:"리듬, 박자", ko:"명사 (남성)" },
+  "comenzar":     { pron:"꼬-멘-사르", ipa:"ko.men.ˈsar", meaning:"시작하다", ko:"동사 원형" },
+  "reglas":       { pron:"레-글라스", ipa:"ˈre.ɣlas", meaning:"규칙들", ko:"명사 복수" },
+  "salvar":       { pron:"살-바르", ipa:"sal.ˈβar", meaning:"구하다, 구원하다", ko:"동사 원형" },
+  "corriente":    { pron:"꼬-리엔-떼", ipa:"ko.ˈrjen.te", meaning:"흐름, 물결, 조류", ko:"명사 (여성)" },
+  "déjate":       { pron:"데-하-떼", ipa:"ˈde.xa.te", meaning:"몸을 맡겨, 내버려 둬", ko:"dejar 동사의 명령형 + 재귀대명사" },
+  "llevar":       { pron:"예-바르", ipa:"ʎe.ˈβar", meaning:"데려가다, 휩쓸리다", ko:"동사 원형" },
+  "fuego":        { pron:"푸에-고", ipa:"ˈfwe.ɣo", meaning:"불, 불꽃, 열정", ko:"명사 (남성)" },
+  "subiendo":     { pron:"수-비엔-도", ipa:"su.ˈβjen.do", meaning:"올라가고 있어", ko:"subir(오르다)의 현재분사" },
+  "puedo":        { pron:"뿌에-도", ipa:"ˈpwe.ðo", meaning:"할 수 있어", ko:"poder의 1인칭 단수" },
+  "más":          { pron:"마스", ipa:"mas", meaning:"더, 더 이상", ko:"부사" },
+  "dime":         { pron:"디-메", ipa:"ˈdi.me", meaning:"말해줘", ko:"decir 명령형 + me" },
+  "conmigo":      { pron:"꼰-미-고", ipa:"kon.ˈmi.ɣo", meaning:"나와 함께", ko:"전치사 con + migo" },
+  "vas":          { pron:"바스", ipa:"bas", meaning:"가다 (2인칭)", ko:"ir 동사의 현재형" },
+  "mira":         { pron:"미-라", ipa:"ˈmi.ra", meaning:"봐, 보다", ko:"mirar 명령형" },
+  "tiembla":      { pron:"띠엠-블라", ipa:"ˈtjem.bla", meaning:"떨다, 떨리다", ko:"temblar 3인칭 단수" },
+  "ciudad":       { pron:"씨우-닫", ipa:"θju.ˈðað", meaning:"도시", ko:"명사 (여성)" },
+  "prepárate":    { pron:"쁘레-빠-라-떼", ipa:"pre.ˈpa.ra.te", meaning:"준비해, 각오해", ko:"prepararse 명령형" },
+  "marcha":       { pron:"마르-차", ipa:"ˈmar.tʃa", meaning:"행진, 후퇴", ko:"명사" },
+  "atrás":        { pron:"아-뜨라스", ipa:"a.ˈtras", meaning:"뒤로, 뒤쪽에", ko:"부사" },
+  "marcha atrás": { pron:"마르차 아뜨라스", ipa:"ˈmar.tʃa a.ˈtras", meaning:"후퇴, 되돌아가기", ko:"관용구" },
+  "vuela":        { pron:"부엘-라", ipa:"ˈbwe.la", meaning:"날아올라! 날아라!", ko:"volar 명령형" },
+  "siente":       { pron:"씨엔-떼", ipa:"ˈsjen.te", meaning:"느껴라, 느끼다", ko:"sentir 명령형" },
+  "corazón":      { pron:"꼬-라-손", ipa:"ko.ra.ˈson", meaning:"심장, 마음", ko:"명사 (남성)" },
+  "perdiendo":    { pron:"뻬르-디엔-도", ipa:"per.ˈðjen.do", meaning:"잃어버리면서", ko:"perder 현재분사" },
+  "completo":     { pron:"꼼-쁠레-또", ipa:"kom.ˈple.to", meaning:"완전히, 완전한", ko:"형용사/부사" },
+  "razón":        { pron:"라-손", ipa:"ra.ˈson", meaning:"이성, 이유, 정신", ko:"명사 (여성)" },
+  "baila":        { pron:"바이-라", ipa:"ˈbaj.la", meaning:"춰라, 춤추다", ko:"bailar 명령형" },
+  "tocar":        { pron:"또-까르", ipa:"to.ˈkar", meaning:"만지다, 닿다", ko:"동사 원형" },
+  "cielo":        { pron:"씨엘-로", ipa:"ˈθje.lo", meaning:"하늘", ko:"명사 (남성)" },
+  "azul":         { pron:"아-술", ipa:"a.ˈθul", meaning:"파란, 파란색", ko:"색깔 형용사" },
+  "cielo azul":   { pron:"씨엘로 아술", ipa:"ˈθje.lo a.ˈθul", meaning:"파란 하늘", ko:"시적 표현" },
+  "nadie":        { pron:"나-디에", ipa:"ˈna.ðje", meaning:"아무도 (없다)", ko:"부정 대명사" },
+  "mundo":        { pron:"문-도", ipa:"ˈmun.do", meaning:"세상, 세계", ko:"명사 (남성)" },
+  "brilla":       { pron:"브리-야", ipa:"ˈbri.ʎa", meaning:"빛나다, 빛이 나다", ko:"brillar 3인칭 단수" },
+  "grita":        { pron:"그리-따", ipa:"ˈɡri.ta", meaning:"외쳐라, 소리쳐라", ko:"gritar 명령형" },
+  "fuerte":       { pron:"푸에르-떼", ipa:"ˈfwer.te", meaning:"강하게, 크게", ko:"형용사/부사" },
+  "pasión":       { pron:"빠-씨온", ipa:"pa.ˈsjon", meaning:"열정, 정열", ko:"명사 (여성)" },
+  "ojos":         { pron:"오-호스", ipa:"ˈo.xos", meaning:"눈 (복수)", ko:"명사 (남성 복수)" },
+  "dominan":      { pron:"도-미-난", ipa:"do.ˈmi.nan", meaning:"지배하다, 사로잡다", ko:"dominar 3인칭 복수" },
+  "control":      { pron:"꼰-뜨롤", ipa:"kon.ˈtrol", meaning:"통제권, 제어", ko:"명사 (남성)" },
+  "estrellas":    { pron:"에스-뜨레-야스", ipa:"es.ˈtre.ʎas", meaning:"별들", ko:"estrella의 복수" },
+  "buscando":     { pron:"부스-깐-도", ipa:"bus.ˈkan.do", meaning:"찾고 있어", ko:"buscar 현재분사" },
+  "calor":        { pron:"까-로르", ipa:"ka.ˈlor", meaning:"온기, 열기, 따뜻함", ko:"명사 (남성)" },
+  "locura":       { pron:"로-꾸-라", ipa:"lo.ˈku.ra", meaning:"광기, 열광, 미침", ko:"명사 (여성)" },
+  "amor":         { pron:"아-모르", ipa:"a.ˈmor", meaning:"사랑", ko:"명사 (남성)" },
+  "brazos":       { pron:"브라-소스", ipa:"ˈbra.θos", meaning:"팔 (복수)", ko:"명사 (남성 복수)" },
+  "mejor":        { pron:"메-호르", ipa:"me.ˈxor", meaning:"더 좋은, 더 잘", ko:"형용사/부사" },
+  "sabe":         { pron:"사-베", ipa:"ˈsa.βe", meaning:"(맛이) 나다, 알다", ko:"saber 3인칭 단수" },
+  "fin":          { pron:"핀", ipa:"fin", meaning:"끝, 마지막", ko:"명사 (남성)" },
+  "hasta":        { pron:"아스-따", ipa:"ˈas.ta", meaning:"~까지", ko:"전치사" },
+  "hasta el fin": { pron:"아스따 엘 핀", ipa:"ˈas.ta el fin", meaning:"끝까지", ko:"관용구" },
+};
+
+// ─── Lyrics ───────────────────────────────────────────────────────────
+const LYRICS = [
+  { t: 0,   section: "Intro", stage: "( 달콤하고 부드러운 어쿠스틱 기타 )" },
+  { t: 4,   es: "Escucha...", ko: "들어봐..." },
+  { t: 8,   es: "Esta noche es de los dos...", ko: "오늘 밤은 우리 둘의 것..." },
+  { t: 13,  es: "¡Let's go!", ko: "자, 가자!" },
+
+  { t: 17,  section: "Verse 1" },
+  { t: 17,  es: "El viento sopla suave, empieza a quemar", ko: "바람이 부드럽게 불어, 불타오르기 시작해" },
+  { t: 22,  es: "Tu mano con la mía quiere jugar", ko: "네 손이 내 손과 장난을 치고 싶어 해" },
+  { t: 27,  es: "Paso a paso, el ritmo va a comenzar", ko: "한 걸음씩, 리듬이 시작되려 해" },
+  { t: 32,  es: "Ya no hay reglas, nadie nos va a salvar", ko: "이제 규칙도 없어, 우리를 구해줄 사람도 없어" },
+  { t: 37,  es: "Siente la corriente, déjate llevar", ko: "흐름을 느껴봐, 그 흐름에 몸을 맡겨" },
+
+  { t: 43,  section: "Pre-Chorus", stage: "( 에너지 고조, 드럼 롤링 )" },
+  { t: 43,  es: "El fuego va subiendo, ya no puedo más", ko: "불꽃이 올라가고 있어, 더 이상 참을 수가 없어" },
+  { t: 49,  es: "Dime si esta noche conmigo te vas", ko: "오늘 밤 나와 함께 갈 건지 말해줘" },
+  { t: 54,  es: "Mira cómo tiembla toda la ciudad", ko: "온 도시가 어떻게 떨리는지 봐" },
+  { t: 59,  es: "¡Prepárate que ya no hay marcha atrás!", ko: "준비해, 이제 되돌아갈 수 없어!" },
+
+  { t: 65,  section: "Climax Chorus", stage: "( 드럼 폭발, 강렬한 고음 보컬 )" },
+  { t: 65,  es: "¡Vuela! ¡Siente el fuego en el corazón!", ko: "날아올라! 심장 속의 불꽃을 느껴봐!" },
+  { t: 71,  es: "¡Ah! Perdiendo por completo la razón", ko: "아! 완전히 이성을 잃어가며" },
+  { t: 76,  es: "Baila conmigo hasta tocar el cielo azul", ko: "파란 하늘에 닿을 때까지 나와 함께 춰" },
+  { t: 82,  es: "¡Nadie en este mundo brilla como tú!", ko: "이 세상에 너처럼 빛나는 사람은 없어!" },
+  { t: 88,  es: "¡Grita fuerte, que se sienta la pasión!", ko: "크게 외쳐, 열정이 느껴지도록!" },
+
+  { t: 96,  section: "Verse 2", stage: "( 부드러운 레게톤 그루브 )" },
+  { t: 96,  es: "Tus ojos me dominan, tienes el control", ko: "네 눈이 나를 지배해, 네가 통제권을 갖고 있어" },
+  { t: 101, es: "Bajo las estrellas, buscando tu calor", ko: "별 아래에서, 네 온기를 찾아" },
+  { t: 106, es: "Es una locura, un juego de amor", ko: "이건 광기야, 사랑의 게임" },
+  { t: 111, es: "Pero en tus brazos todo sabe mejor", ko: "하지만 네 품 안에서는 모든 것이 더 좋아" },
+
+  { t: 117, section: "Pre-Chorus", stage: "( 에너지 고조 )" },
+  { t: 117, es: "El fuego va subiendo, ya no puedo más", ko: "불꽃이 올라가고 있어, 더 이상 참을 수가 없어" },
+  { t: 123, es: "Dime si esta noche conmigo te vas", ko: "오늘 밤 나와 함께 갈 건지 말해줘" },
+  { t: 128, es: "Mira cómo tiembla toda la ciudad", ko: "온 도시가 어떻게 떨리는지 봐" },
+  { t: 133, es: "¡Prepárate que ya no hay marcha atrás!", ko: "준비해, 이제 되돌아갈 수 없어!" },
+
+  { t: 139, section: "Climax Chorus", stage: "( 드럼 폭발 )" },
+  { t: 139, es: "¡Vuela! ¡Siente el fuego en el corazón!", ko: "날아올라! 심장 속의 불꽃을 느껴봐!" },
+  { t: 145, es: "¡Ah! Perdiendo por completo la razón", ko: "아! 완전히 이성을 잃어가며" },
+  { t: 150, es: "Baila conmigo hasta tocar el cielo azul", ko: "파란 하늘에 닿을 때까지 나와 함께 춰" },
+  { t: 156, es: "¡Nadie en este mundo brilla como tú!", ko: "이 세상에 너처럼 빛나는 사람은 없어!" },
+  { t: 162, es: "¡Grita fuerte, que se sienta la pasión!", ko: "크게 외쳐, 열정이 느껴지도록!" },
+
+  { t: 170, section: "Outro", stage: "( 고음 지속, 기타 페이드아웃 )" },
+  { t: 170, es: "Brilla como tú...", ko: "너처럼 빛나..." },
+  { t: 176, es: "¡Ah...!", ko: "아...!" },
+  { t: 182, es: "Hasta el fin.", ko: "끝까지." },
+];
+
+// ─── Build lyrics DOM ─────────────────────────────────────────────────
+const panel = document.getElementById('lyricsPanel');
+
+function tokenize(text) {
+  return text.split(/(\s+)/).map(tok => {
+    if (/^\s+$/.test(tok)) return tok;
+    const clean = tok.toLowerCase().replace(/[¡!¿?.,…]/g,'').trim();
+    const span = document.createElement('span');
+    span.className = 'word';
+    span.textContent = tok;
+    span.dataset.word = clean;
+    span.addEventListener('click', e => showPopup(e, clean, tok));
+    return span;
+  });
+}
+
+LYRICS.forEach((line, i) => {
+  if (line.section) {
+    const lbl = document.createElement('div');
+    lbl.className = 'section-label';
+    lbl.textContent = line.section;
+    panel.appendChild(lbl);
+  }
+  if (line.stage) {
+    const stg = document.createElement('div');
+    stg.className = 'stage-note';
+    stg.textContent = line.stage;
+    panel.appendChild(stg);
+  }
+  if (!line.es) return;
+
+  const div = document.createElement('div');
+  div.className = 'lyric-line';
+  div.dataset.index = i;
+  div.dataset.time = line.t;
+
+  const esDiv = document.createElement('div');
+  esDiv.className = 'es-text';
+  tokenize(line.es).forEach(n => {
+    if (typeof n === 'string') esDiv.appendChild(document.createTextNode(n));
+    else esDiv.appendChild(n);
+  });
+
+  const koDiv = document.createElement('div');
+  koDiv.className = 'ko-text';
+  if (line.ko) koDiv.textContent = line.ko;
+
+  div.appendChild(esDiv);
+  div.appendChild(koDiv);
+  panel.appendChild(div);
+});
+
+// ─── Korean toggle ────────────────────────────────────────────────────
+const koToggle = document.getElementById('koToggle');
+function applyKoToggle() {
+  document.querySelectorAll('.ko-text').forEach(el => {
+    el.classList.toggle('visible', koToggle.checked);
+  });
+}
+koToggle.addEventListener('change', applyKoToggle);
+applyKoToggle();
+
+// ─── YouTube IFrame API ───────────────────────────────────────────────
+let player = null;
+let syncInterval = null;
+
+window.onYouTubeIframeAPIReady = function() {
+  player = new YT.Player('ytPlayer', {
+    videoId: 'HKb68QsXVTk',
+    host: 'https://www.youtube-nocookie.com',
+    playerVars: {
+      rel: 0,
+      modestbranding: 1,
+      playsinline: 1,
+    },
+    events: {
+      onReady: () => {
+        syncInterval = setInterval(syncLyrics, 250);
+      }
+    }
+  });
+};
+
+function fmt(s) {
+  s = Math.floor(s || 0);
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+function syncLyrics() {
+  if (!player || typeof player.getCurrentTime !== 'function') return;
+  const t = player.getCurrentTime();
+  document.getElementById('syncInfo').textContent = '⏱ ' + fmt(t);
+
+  const lines = [...document.querySelectorAll('.lyric-line')];
+  let activeIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (parseFloat(lines[i].dataset.time) <= t) activeIdx = i;
+    else break;
+  }
+
+  lines.forEach((l, i) => l.classList.toggle('active', i === activeIdx));
+
+  if (activeIdx >= 0 && document.getElementById('autoScrollToggle').checked) {
+    const activeLine = lines[activeIdx];
+    const panelEl = document.getElementById('lyricsPanel');
+    const relTop = activeLine.offsetTop - panelEl.offsetTop;
+    const target = relTop - panelEl.clientHeight / 2 + activeLine.clientHeight / 2;
+    panelEl.scrollTo({ top: target, behavior: 'smooth' });
+  }
+}
+
+// ─── Popup ────────────────────────────────────────────────────────────
+const popup = document.getElementById('popup');
+
+function showPopup(e, clean, original) {
+  e.stopPropagation();
+  const entry = DICT[clean];
+  document.getElementById('pWord').textContent = original;
+  if (entry) {
+    document.getElementById('pPron').innerHTML =
+      `발음: <span>${entry.pron}</span> &nbsp; IPA: <span>${entry.ipa}</span>`;
+    document.getElementById('pMeaning').textContent = '뜻: ' + entry.meaning;
+    document.getElementById('pKo').textContent = entry.ko ? '📌 ' + entry.ko : '';
+  } else {
+    document.getElementById('pPron').innerHTML = '<span>발음 정보 없음</span>';
+    document.getElementById('pMeaning').textContent = '단어를 클릭해 뜻을 확인하세요.';
+    document.getElementById('pKo').textContent = '';
+  }
+  popup.classList.add('show');
+
+  const box = document.getElementById('popupBox');
+  let left = e.clientX + 12, top = e.clientY - 20;
+  const w = 280, h = 140;
+  if (left + w > window.innerWidth - 10) left = e.clientX - w - 12;
+  if (top + h > window.innerHeight - 10) top = window.innerHeight - h - 10;
+  if (top < 10) top = 10;
+  popup.style.left = left + 'px';
+  popup.style.top  = top  + 'px';
+  popup.style.transform = '';
+}
+
+function closePopup() { popup.classList.remove('show'); }
+document.addEventListener('click', e => {
+  if (!popup.contains(e.target)) closePopup();
+});
+
+// ─── Vocab grid ───────────────────────────────────────────────────────
+const vocabGrid = document.getElementById('vocabGrid');
+Object.entries(DICT).forEach(([word, data]) => {
+  const card = document.createElement('div');
+  card.className = 'vocab-card';
+  card.innerHTML = `<div class="vc-es">${word}</div>
+    <div class="vc-pron">${data.pron}</div>
+    <div class="vc-ko">${data.meaning}</div>`;
+  card.addEventListener('click', () => {
+    document.getElementById('pWord').textContent = word;
+    document.getElementById('pPron').innerHTML =
+      `발음: <span>${data.pron}</span> &nbsp; IPA: <span>${data.ipa}</span>`;
+    document.getElementById('pMeaning').textContent = '뜻: ' + data.meaning;
+    document.getElementById('pKo').textContent = data.ko ? '📌 ' + data.ko : '';
+    popup.classList.add('show');
+    popup.style.left = '50%';
+    popup.style.top  = '50%';
+    popup.style.transform = 'translate(-50%,-50%)';
+  });
+  vocabGrid.appendChild(card);
+});
+
+function toggleVocab() {
+  document.getElementById('vocabGrid').classList.toggle('open');
+}
+</script>
+</body>
+</html>
